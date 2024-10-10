@@ -33,17 +33,6 @@ struct ini_t {
 };
 
 
-/* Case insensitive string compare */
-static int strcmpci(const char *a, const char *b) {
-  for (;;) {
-    int d = tolower(*a) - tolower(*b);
-    if (d != 0 || !*a) {
-      return d;
-    }
-    a++, b++;
-  }
-}
-
 /* Returns the next string in the split data */
 static char* next(ini_t *ini, char *p) {
   p += strlen(p);
@@ -242,8 +231,8 @@ const char* ini_get(ini_t *ini, const char *section, const char *key) {
     } else {
       /* Handle key */
       val = next(ini, p);
-      if (!section || !strcmpci(section, current_section)) {
-        if (!strcmpci(p, key)) {
+      if (!section || !strcasecmp(section, current_section)) {
+        if (!strcasecmp(p, key)) {
           return val;
         }
       }
