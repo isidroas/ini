@@ -1,0 +1,13 @@
+name: CI
+
+on: [push]
+
+jobs:
+  Test:
+
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v1
+    - name: Extract example from README.md and run 
+      run: .github/workflows/test.sh
