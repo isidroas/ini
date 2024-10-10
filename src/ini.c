@@ -24,6 +24,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "ini.h"
 
@@ -164,8 +168,8 @@ static void split_data(ini_t *ini) {
 
 ini_t* ini_load(const char *filename) {
   ini_t *ini = NULL;
-  FILE *fp = NULL;
-  int n, sz;
+  int fd;
+  struct stat statbuf;
 
   /* Init ini struct */
   ini = malloc(sizeof(*ini));
@@ -174,42 +178,35 @@ ini_t* ini_load(const char *filename) {
   }
   memset(ini, 0, sizeof(*ini));
 
+  if (stat(filename, &statbuf))
+    goto fail;
+
   /* Open file */
-  fp = fopen(filename, "rb");
-  if (!fp) {
+  fd = open(filename, O_RDONLY);
+  if (fd==-1) {
     goto fail;
   }
 
-  /* Get file size */
-  fseek(fp, 0, SEEK_END);
-  sz = ftell(fp);
-  rewind(fp);
-
-  /* Load file content into memory, null terminate, init end var */
-  ini->data = malloc(sz + 1);
-  ini->data[sz] = '\0';
-  ini->end = ini->data  + sz;
-  n = fread(ini->data, 1, sz, fp);
-  if (n != sz) {
-    goto fail;
-  }
+  ini->data = mmap(NULL, statbuf.st_size, PROT_READ| PROT_WRITE, MAP_PRIVATE, fd, 0);
+  close(fd);
+  if((long int)ini->data == -1)
+    return NULL;
+  ini->end= ini->data + statbuf.st_size;
 
   /* Prepare data */
   split_data(ini);
 
-  /* Clean up and return */
-  fclose(fp);
   return ini;
 
 fail:
-  if (fp) fclose(fp);
   if (ini) ini_free(ini);
   return NULL;
 }
 
 
 void ini_free(ini_t *ini) {
-  free(ini->data);
+  if (ini->data)
+    munmap(ini->data, ini->end - ini->data);
   free(ini);
 }
 
